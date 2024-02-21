@@ -1,0 +1,108 @@
+/* style.css */
+
+/* Style the form */
+form {
+    margin: 20px;
+}
+
+/* Style the table */
+.form-table {
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* Style the table rows */
+.form-table tr {
+    border-bottom: 1px solid #ddd;
+    padding: 10px 0;
+}
+
+/* Style the table headers */
+.form-table th {
+    text-align: left;
+    padding-right: 20px;
+}
+
+/* Style the table data */
+.form-table td {
+    padding: 10px 0;
+}
+
+/* Style the input fields */
+input[type="text"],
+input[type="number"],
+textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+
+/* Style the file input */
+input[type="file"] {
+    margin-bottom: 10px;
+}
+
+.characters,
+.questions,
+.answers {
+    width: 100%;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+
+/* Style the character and answer divs */
+.character,
+.question,
+.answer {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Style the buttons */
+button {
+    background-color: #4CAF50;
+    /* Green */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+/* Style the remove buttons */
+.remove-character,
+.remove-question,
+.remove-answer,
+.cancel {
+    background-color: #f44336;
+    margin-top: 10px;
+    margin-left: auto;
+}
+
+.options {
+    width: fit-content;
+    margin-left: auto;
+    margin-right: 10px;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: #2271b1;
+}
+
+.delete-form {
+    width: fit-content;
+}
