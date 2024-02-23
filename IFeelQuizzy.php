@@ -80,7 +80,37 @@ function ifeelquizzy_enqueue_styles()
     wp_enqueue_style('ifeelquizzy-style', plugins_url('style.css', __FILE__));
 }
 add_action('admin_enqueue_scripts', 'ifeelquizzy_enqueue_styles');
+add_action('rest_api_init', function () {
+    register_rest_route('ifeelquizzy/v1', '/data/(?P<id>[0-9-]+)', array(
+        'methods' => 'GET',
+        'callback' => 'get_quizz_data',
+    ));
+});
 
+function get_quizz_data($data)
+{
+    global $wpdb;
+    $id = $data['id']; // Get the name from the URL
+
+    // Fetch quiz, characters, questions, and answers from database
+    $quiz = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}quizzes WHERE id = %d", $id));
+    $characters = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}characters WHERE quiz_id = %d", $quiz->id));
+    $questions = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}questions WHERE quiz_id = %d", $quiz->id));
+
+    // Fetch answers and points for each question
+    foreach ($questions as $question) {
+        $question->answers = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}answers WHERE question_id = %d", $question->id));
+        foreach ($question->answers as $answer) {
+            $answer->points = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}points WHERE answer_id = %d", $answer->id));
+        }
+    }
+
+    return array(
+        'quiz' => $quiz,
+        'characters' => $characters,
+        'questions' => $questions
+    );
+}
 // Create admin menu page
 add_action('admin_menu', 'ifeelquizzy_menu');
 function ifeelquizzy_menu()
@@ -209,6 +239,7 @@ function createQuizz()
     );
     $quiz_id = $wpdb->insert_id;
 
+    $character_ids = [];
     // Insert characters
     foreach ($_POST['character_name'] as $index => $character_name) {
         //$character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
@@ -221,6 +252,7 @@ function createQuizz()
                 'quiz_id' => $quiz_id
             )
         );
+        $character_ids[] = $wpdb->insert_id;
     }
 
     // Insert questions and answers
@@ -234,7 +266,7 @@ function createQuizz()
         );
         $question_id = $wpdb->insert_id;
 
-        foreach ($_POST['answer_text'] as $answer_index => $answer_text) {
+        foreach ($_POST['answer_text'][$question_index] as $answer_index => $answer_text) {
             $wpdb->insert(
                 $wpdb->prefix . 'answers',
                 array(
@@ -245,14 +277,16 @@ function createQuizz()
             $answer_id = $wpdb->insert_id;
 
             // Insert points
-            $wpdb->insert(
-                $wpdb->prefix . 'points',
-                array(
-                    'points' => $_POST['answer_points'][$answer_index],
-                    'character_id' => $answer_index,
-                    'answer_id' => $answer_id
-                )
-            );
+            foreach ($_POST['answer_points'][$question_index][$answer_index] as $point_index => $point) {
+                $wpdb->insert(
+                    $wpdb->prefix . 'points',
+                    array(
+                        'points' => $point,
+                        'character_id' => $character_ids[$point_index],
+                        'answer_id' => $answer_id
+                    )
+                );
+            }
         }
     }
 
@@ -308,9 +342,10 @@ function ifeelquizzy_create_page()
 
             var answers = document.getElementsByClassName('answer');
             for (var i = 0; i < answers.length; i++) {
+                var question = answers[i].parentNode.parentNode;
                 var points = document.createElement('input');
                 points.type = 'number';
-                points.name = 'answer_points[]';
+                points.name = 'answer_points['+question.dataset.questionId+']['+answers[i].dataset.answerId+'][]';
                 points.value = 0;
                 points.dataset.characterId = i;
                 points.min = 0;
@@ -349,7 +384,9 @@ function ifeelquizzy_create_page()
             addAnswerButton.addEventListener('click', function(e) {
                 var answer = document.createElement('div');
                 answer.className = 'answer';
-                answer.innerHTML = '<input type="text" name="answer_text[]" placeholder="Answer Text *" required><div class="points"></div><button type="button" class="remove-answer">Remove Answer</button>';
+                answer.innerHTML = '<input type="text" name="answer_text[' + question.dataset.questionId + '][]" placeholder="Answer Text *" required><div class="points"></div><button type="button" class="remove-answer">Remove Answer</button>';
+                lastestAnswer = e.target.previousElementSibling.lastElementChild;
+                answer.dataset.answerId = lastestAnswer ? parseInt(lastestAnswer.dataset.answerId) + 1 : 0;
                 e.target.previousElementSibling.appendChild(answer);
 
                 var removeButtons = answer.getElementsByClassName('remove-answer');
@@ -364,7 +401,7 @@ function ifeelquizzy_create_page()
                 for (var j = 0; j < characters.length; j++) {
                     var points = document.createElement('input');
                     points.type = 'number';
-                    points.name = 'answer_points[]';
+                    points.name = 'answer_points['+question.dataset.questionId+']['+answer.dataset.answerId+'][]';
                     points.value = 0;
                     points.dataset.characterId = j;
                     points.dataset.questionId = questionCount;
