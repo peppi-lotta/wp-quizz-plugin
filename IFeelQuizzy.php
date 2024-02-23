@@ -229,7 +229,7 @@ function ifeelquizzy_submenu()
 function createQuizz()
 {
     global $wpdb;
-    
+
     // Insert quiz
     $wpdb->insert(
         $wpdb->prefix . 'quizzes',
@@ -345,7 +345,7 @@ function ifeelquizzy_create_page()
                 var question = answers[i].parentNode.parentNode;
                 var points = document.createElement('input');
                 points.type = 'number';
-                points.name = 'answer_points['+question.dataset.questionId+']['+answers[i].dataset.answerId+'][]';
+                points.name = 'answer_points[' + question.dataset.questionId + '][' + answers[i].dataset.answerId + '][]';
                 points.value = 0;
                 points.dataset.characterId = i;
                 points.min = 0;
@@ -401,7 +401,7 @@ function ifeelquizzy_create_page()
                 for (var j = 0; j < characters.length; j++) {
                     var points = document.createElement('input');
                     points.type = 'number';
-                    points.name = 'answer_points['+question.dataset.questionId+']['+answer.dataset.answerId+'][]';
+                    points.name = 'answer_points[' + question.dataset.questionId + '][' + answer.dataset.answerId + '][]';
                     points.value = 0;
                     points.dataset.characterId = j;
                     points.dataset.questionId = questionCount;
@@ -446,17 +446,8 @@ function updateQuizz()
     $quiz_id = $_POST['quiz_id'];
 
     // Fetch quiz, characters, questions, and answers from database
-    $quiz = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}quizzes WHERE id = %d", $quiz_id));
     $characters = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}characters WHERE quiz_id = %d", $quiz_id));
     $questions = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}questions WHERE quiz_id = %d", $quiz_id));
-
-    // Fetch answers and points for each question
-    foreach ($questions as $question) {
-        $question->answers = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}answers WHERE question_id = %d", $question->id));
-        foreach ($question->answers as $answer) {
-            $answer->points = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}points WHERE answer_id = %d", $answer->id));
-        }
-    }
 
     // Update quiz
     $wpdb->update(
@@ -468,7 +459,19 @@ function updateQuizz()
     // Insert characters
     foreach ($_POST['character_name'] as $index => $character_name) {
         $character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
-        if (!is_null($_POST['character_db_id'][$index]) && $_POST['character_db_id'][$index] != "") {
+        if (is_null($_POST['character_db_id'][$index]) || $_POST['character_db_id'][$index] == "") {
+            //$character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
+            $wpdb->insert(
+                $wpdb->prefix . 'characters',
+                array(
+                    'name' => $character_name,
+                    'description' => $_POST['character_description'][$index],
+                    //'image' => $character_image,
+                    'quiz_id' => $quiz_id
+                )
+            );
+            $character_ids[] = $wpdb->insert_id;
+        } else {
             $wpdb->update(
                 $wpdb->prefix . 'characters',
                 array(
@@ -478,16 +481,6 @@ function updateQuizz()
                 ),
                 array(
                     'id' => $_POST['character_db_id'][$index]
-                )
-            );
-        } else {
-            $wpdb->insert(
-                $wpdb->prefix . 'characters',
-                array(
-                    'name' => $character_name,
-                    'description' => $_POST['character_description'][$index],
-                    'image' => $character_image,
-                    'quiz_id' => $quiz_id
                 )
             );
         }
@@ -545,9 +538,9 @@ function ifeelquizzy_modify_page()
             <?php
                 $characterCount += 1;
             endforeach; ?>
-            <button type="button" id="add-character">Add Character</button>
         </div>
-
+        <button type="button" id="add-character">Add Character</button>
+        
         <h2>Questions</h2>
         <div id="questions" class="questions">
             <?php foreach ($questions as $question) : ?>
@@ -583,16 +576,12 @@ function ifeelquizzy_modify_page()
         var characterCount = <?= count($characters) + 1; ?>;
         var questionCount = <?= count($questions) + 1; ?>;
 
-        document.getElementById('add-character').addEventListener('click', function() {
-            var character = document.createElement('div');
-            character.className = 'character';
-            character.dataset.characterId = characterCount;
-            character.innerHTML = '<input type="hidden" name="character_db_id[]" value=""><label>Character: ' + characterCount + '</label><input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + characterCount + '\')"><img id="character_image_preview_' + characterCount + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
-            document.getElementById('characters').appendChild(character);
 
+        function removeCharacter() {
             var removeButtons = document.getElementsByClassName('remove-character');
             for (var i = 0; i < removeButtons.length; i++) {
                 removeButtons[i].addEventListener('click', function(e) {
+                    console.log('remove character clicked');
                     var characterId = e.target.parentNode.dataset.characterId;
                     var pointsFields = document.querySelectorAll('input[data-character-id="' + characterId + '"]');
                     for (var j = 0; j < pointsFields.length; j++) {
@@ -606,7 +595,9 @@ function ifeelquizzy_modify_page()
                     e.target.parentNode.remove();
                 });
             }
+        }
 
+        function addPointsToAnswers() {
             var answers = document.getElementsByClassName('answer');
             for (var i = 0; i < answers.length; i++) {
                 var points = document.createElement('input');
@@ -629,7 +620,18 @@ function ifeelquizzy_modify_page()
                 pointsDiv.appendChild(label);
                 pointsDiv.appendChild(points);
             }
+        }
+        removeCharacter();
 
+        document.getElementById('add-character').addEventListener('click', function() {
+            var character = document.createElement('div');
+            character.className = 'character';
+            character.dataset.characterId = characterCount;
+            character.innerHTML = '<input type="hidden" name="character_db_id[]" value=""><label>Character: ' + characterCount + '</label><input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + characterCount + '\')"><img id="character_image_preview_' + characterCount + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
+            document.getElementById('characters').appendChild(character);
+
+            removeCharacter();
+            addPointsToAnswers();
             characterCount++;
         });
         document.getElementById('add-question').addEventListener('click', function() {
