@@ -449,6 +449,14 @@ function updateQuizz()
     $characters = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}characters WHERE quiz_id = %d", $quiz_id));
     $questions = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}questions WHERE quiz_id = %d", $quiz_id));
 
+    // Fetch answers and points for each question
+    foreach ($questions as $question) {
+        $question->answers = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}answers WHERE question_id = %d", $question->id));
+        foreach ($question->answers as $answer) {
+            $answer->points = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}points WHERE answer_id = %d", $answer->id));
+        }
+    }
+
     // Update quiz
     $wpdb->update(
         $wpdb->prefix . 'quizzes',
@@ -459,19 +467,7 @@ function updateQuizz()
     // Insert characters
     foreach ($_POST['character_name'] as $index => $character_name) {
         $character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
-        if (is_null($_POST['character_db_id'][$index]) || $_POST['character_db_id'][$index] == "") {
-            //$character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
-            $wpdb->insert(
-                $wpdb->prefix . 'characters',
-                array(
-                    'name' => $character_name,
-                    'description' => $_POST['character_description'][$index],
-                    //'image' => $character_image,
-                    'quiz_id' => $quiz_id
-                )
-            );
-            $character_ids[] = $wpdb->insert_id;
-        } else {
+        if (isset($_POST['character_db_id'][$index])) {
             $wpdb->update(
                 $wpdb->prefix . 'characters',
                 array(
@@ -483,11 +479,54 @@ function updateQuizz()
                     'id' => $_POST['character_db_id'][$index]
                 )
             );
+        } else {
+            //$character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
+            $wpdb->insert(
+                $wpdb->prefix . 'characters',
+                array(
+                    'name' => $character_name,
+                    'description' => $_POST['character_description'][$index],
+                    //'image' => $character_image,
+                    'quiz_id' => $quiz_id
+                )
+            );
+            $character_ids[] = $wpdb->insert_id;
         }
     }
     foreach ($characters as $character) {
         if (!in_array($character->id, $_POST['character_db_id'])) {
             $wpdb->delete("{$wpdb->prefix}characters", array('id' => $character->id));
+            $wpdb->delete("{$wpdb->prefix}points", array('character_id' => $character->id));
+        }
+    }
+
+    $question_ids = [];
+    // Insert questions
+    foreach ($_POST['question_text'] as $index => $question_text) {
+        if (isset($_POST['question_db_id'][$index])) {
+            $wpdb->update(
+                $wpdb->prefix . 'questions',
+                array(
+                    'question_text' => $question_text,
+                ),
+                array(
+                    'id' => $_POST['question_db_id'][$index]
+                )
+            );
+        } else {
+            $wpdb->insert(
+                $wpdb->prefix . 'questions',
+                array(
+                    'question_text' => $question_text,
+                    'quiz_id' => $quiz_id
+                )
+            );
+            $question_ids[] = $wpdb->insert_id;
+        }
+    }
+    foreach ($questions as $question) {
+        if (!in_array($question->id, $_POST['question_db_id'])) {
+            $wpdb->delete("{$wpdb->prefix}questions", array('id' => $question->id));
         }
     }
 
@@ -540,7 +579,7 @@ function ifeelquizzy_modify_page()
             endforeach; ?>
         </div>
         <button type="button" id="add-character">Add Character</button>
-        
+
         <h2>Questions</h2>
         <div id="questions" class="questions">
             <?php foreach ($questions as $question) : ?>
@@ -565,8 +604,8 @@ function ifeelquizzy_modify_page()
                     <button type="button" class="remove-question">Remove Question</button>
                 </div>
             <?php endforeach; ?>
-            <button type="button" id="add-question">Add Question</button>
         </div>
+        <button type="button" id="add-question">Add Question</button>
         <div class="options">
             <button type="button" class="cancel" id="cancel">Cancel</button>
             <button type="submit">Save</button>
@@ -621,71 +660,89 @@ function ifeelquizzy_modify_page()
                 pointsDiv.appendChild(points);
             }
         }
+
+        function addRemoveQuestionListeners() {
+            var removeButtons = document.getElementsByClassName('remove-question');
+            for (var i = 0; i < removeButtons.length; i++) {
+                removeButtons[i].addEventListener('click', function(e) {
+                    e.target.parentNode.remove();
+                });
+            }
+        }
+
+        function addRemoveAnswerListeners() {
+            var removeButtons = document.getElementsByClassName('remove-answer');
+            for (var i = 0; i < removeButtons.length; i++) {
+                removeButtons[i].addEventListener('click', function(e) {
+                    e.target.parentNode.remove();
+                });
+            }
+        }
+
+        function addAnswerListeners() {
+            var addAnswerButton = document.getElementsByClassName('add-answer');
+            for (var i = 0; i < addAnswerButton.length; i++) {
+                addAnswerButton[i].addEventListener('click', function(e) {
+                    var answer = document.createElement('div');
+                    answer.className = 'answer';
+                    answer.innerHTML = '<input type="hidden" name="answer_db_id[]" value=""><input type="text" name="answer_text[]" placeholder="Answer Text *" required><div class="points"></div><button type="button" class="remove-answer">Remove Answer</button>';
+                    e.target.previousElementSibling.appendChild(answer);
+
+                    var characters = document.getElementsByClassName('character');
+                    var pointsDiv = answer.querySelector('.points');
+                    for (var j = 0; j < characters.length; j++) {
+                        var points = document.createElement('input');
+                        points.type = 'number';
+                        points.name = 'answer_points[]';
+                        points.value = 0;
+                        points.dataset.characterId = j;
+                        points.dataset.questionId = questionCount;
+                        points.id = "points_" + questionCount + "_" + j;
+                        points.min = 0;
+                        points.max = 10;
+                        points.required = true;
+
+                        var label = document.createElement('label'); // Create a label element
+                        label.setAttribute('for', "points_" + questionCount + "_" + j);
+                        var characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + j + '"]');
+                        var characterName = characterNameInput ? characterNameInput.value : 'Character ' + j;
+                        label.textContent = 'Points for ' + characterName;
+
+                        pointsDiv.appendChild(label);
+                        pointsDiv.appendChild(points);
+                    }
+                });
+            }
+        }
+
         removeCharacter();
+        addRemoveQuestionListeners();
+        addAnswerListeners();
+        addRemoveAnswerListeners();
 
         document.getElementById('add-character').addEventListener('click', function() {
             var character = document.createElement('div');
             character.className = 'character';
             character.dataset.characterId = characterCount;
-            character.innerHTML = '<input type="hidden" name="character_db_id[]" value=""><label>Character: ' + characterCount + '</label><input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + characterCount + '\')"><img id="character_image_preview_' + characterCount + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
+            character.innerHTML = '<label>Character: ' + characterCount + '</label><input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + characterCount + '\')"><img id="character_image_preview_' + characterCount + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
             document.getElementById('characters').appendChild(character);
 
             removeCharacter();
             addPointsToAnswers();
             characterCount++;
         });
+
         document.getElementById('add-question').addEventListener('click', function() {
             var question = document.createElement('div');
             question.className = 'question';
-            question.innerHTML = '<input type="hidden" name="question_db_id[]" value=""><input type="text" name="question_text[]" placeholder="Question Text *" required><div class="answers"></div><button type="button" class="add-answer">Add Answer</button><button type="button" class="remove-question">Remove Question</button>';
+            question.innerHTML = '<input type="text" name="question_text[]" placeholder="Question Text *" required><div class="answers"></div><button type="button" class="add-answer">Add Answer</button><button type="button" class="remove-question">Remove Question</button>';
             question.dataset.questionId = questionCount;
             document.getElementById('questions').appendChild(question);
 
-            var removeButtons = question.getElementsByClassName('remove-question');
-            for (var i = 0; i < removeButtons.length; i++) {
-                removeButtons[i].addEventListener('click', function(e) {
-                    e.target.parentNode.remove();
-                });
-            }
+            addRemoveQuestionListeners();
+            addAnswerListeners();
+            addRemoveAnswerListeners();
 
-            var addAnswerButton = question.getElementsByClassName('add-answer')[0];
-            addAnswerButton.addEventListener('click', function(e) {
-                var answer = document.createElement('div');
-                answer.className = 'answer';
-                answer.innerHTML = '<input type="hidden" name="answer_db_id[]" value=""><input type="text" name="answer_text[]" placeholder="Answer Text *" required><div class="points"></div><button type="button" class="remove-answer">Remove Answer</button>';
-                e.target.previousElementSibling.appendChild(answer);
-
-                var removeButtons = answer.getElementsByClassName('remove-answer');
-                for (var j = 0; j < removeButtons.length; j++) {
-                    removeButtons[j].addEventListener('click', function(e) {
-                        e.target.parentNode.remove();
-                    });
-                }
-
-                var characters = document.getElementsByClassName('character');
-                var pointsDiv = answer.querySelector('.points');
-                for (var j = 0; j < characters.length; j++) {
-                    var points = document.createElement('input');
-                    points.type = 'number';
-                    points.name = 'answer_points[]';
-                    points.value = 0;
-                    points.dataset.characterId = j;
-                    points.dataset.questionId = questionCount;
-                    points.id = "points_" + questionCount + "_" + j;
-                    points.min = 0;
-                    points.max = 10;
-                    points.required = true;
-
-                    var label = document.createElement('label'); // Create a label element
-                    label.setAttribute('for', "points_" + questionCount + "_" + j);
-                    var characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + j + '"]');
-                    var characterName = characterNameInput ? characterNameInput.value : 'Character ' + j;
-                    label.textContent = 'Points for ' + characterName;
-
-                    pointsDiv.appendChild(label);
-                    pointsDiv.appendChild(points);
-                }
-            });
             questionCount++;
         });
 
