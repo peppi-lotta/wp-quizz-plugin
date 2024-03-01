@@ -313,24 +313,24 @@ function ifeelquizzy_create_page()
         </div>
     </form>
     <script>
-        var characterCount = 0;
-        var questionCount = 0;
+        let characterCount = 0;
+        let questionCount = 0;
 
         document.getElementById('add-character').addEventListener('click', function() {
-            var character = document.createElement('div');
+            let character = document.createElement('div');
             character.className = 'character';
             character.dataset.characterId = characterCount;
             character.innerHTML = '<label>Character: ' + characterCount + '</label><input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + characterCount + '\')"><img id="character_image_preview_' + characterCount + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
             document.getElementById('characters').appendChild(character);
 
-            var removeButtons = document.getElementsByClassName('remove-character');
-            for (var i = 0; i < removeButtons.length; i++) {
+            let removeButtons = document.getElementsByClassName('remove-character');
+            for (let i = 0; i < removeButtons.length; i++) {
                 removeButtons[i].addEventListener('click', function(e) {
-                    var characterId = e.target.parentNode.dataset.characterId;
-                    var pointsFields = document.querySelectorAll('input[data-character-id="' + characterId + '"]');
-                    for (var j = 0; j < pointsFields.length; j++) {
-                        var pointsFieldId = pointsFields[j].id;
-                        var label = document.querySelector('label[for="' + pointsFieldId + '"]');
+                    let characterId = e.target.parentNode.dataset.characterId;
+                    let pointsFields = document.querySelectorAll('input[data-character-id="' + characterId + '"]');
+                    for (let j = 0; j < pointsFields.length; j++) {
+                        let pointsFieldId = pointsFields[j].id;
+                        let label = document.querySelector('label[for="' + pointsFieldId + '"]');
                         if (label) {
                             label.remove();
                         }
@@ -340,23 +340,23 @@ function ifeelquizzy_create_page()
                 });
             }
 
-            var answers = document.getElementsByClassName('answer');
-            for (var i = 0; i < answers.length; i++) {
-                var question = answers[i].parentNode.parentNode;
-                var points = document.createElement('input');
+            let answers = document.getElementsByClassName('answer');
+            for (let i = 0; i < answers.length; i++) {
+                let question = answers[i].parentNode.parentNode;
+                let points = document.createElement('input');
                 points.type = 'number';
                 points.name = 'answer_points[' + question.dataset.questionId + '][' + answers[i].dataset.answerId + '][]';
                 points.value = 0;
                 points.dataset.characterId = i;
                 points.min = 0;
-                points.max = 10;
+                points.max = 100;
                 points.required = true;
 
-                var label = document.createElement('label'); // Create a label element
+                let label = document.createElement('label'); // Create a label element
                 label.for = points.id; // Set the for attribute to the id of the points field
-                var characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + i + '"]');
+                let characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + i + '"]');
                 console.log(characterNameInput);
-                var characterName = characterNameInput ? characterNameInput.value : 'Character ' + characterCount + ' *';
+                let characterName = characterNameInput ? characterNameInput.value : 'Character ' + characterCount + ' *';
                 label.textContent = 'Points for ' + characterName;
 
                 let pointsDiv = answers[i].querySelector('.points');
@@ -367,39 +367,39 @@ function ifeelquizzy_create_page()
             characterCount++;
         });
         document.getElementById('add-question').addEventListener('click', function() {
-            var question = document.createElement('div');
+            let question = document.createElement('div');
             question.className = 'question';
             question.innerHTML = '<input type="text" name="question_text[]" placeholder="Question Text *" required><div class="answers"></div><button type="button" class="add-answer">Add Answer</button><button type="button" class="remove-question">Remove Question</button>';
             question.dataset.questionId = questionCount;
             document.getElementById('questions').appendChild(question);
 
-            var removeButtons = question.getElementsByClassName('remove-question');
-            for (var i = 0; i < removeButtons.length; i++) {
+            let removeButtons = question.getElementsByClassName('remove-question');
+            for (let i = 0; i < removeButtons.length; i++) {
                 removeButtons[i].addEventListener('click', function(e) {
                     e.target.parentNode.remove();
                 });
             }
 
-            var addAnswerButton = question.getElementsByClassName('add-answer')[0];
+            let addAnswerButton = question.getElementsByClassName('add-answer')[0];
             addAnswerButton.addEventListener('click', function(e) {
-                var answer = document.createElement('div');
+                let answer = document.createElement('div');
                 answer.className = 'answer';
                 answer.innerHTML = '<input type="text" name="answer_text[' + question.dataset.questionId + '][]" placeholder="Answer Text *" required><div class="points"></div><button type="button" class="remove-answer">Remove Answer</button>';
                 lastestAnswer = e.target.previousElementSibling.lastElementChild;
                 answer.dataset.answerId = lastestAnswer ? parseInt(lastestAnswer.dataset.answerId) + 1 : 0;
                 e.target.previousElementSibling.appendChild(answer);
 
-                var removeButtons = answer.getElementsByClassName('remove-answer');
-                for (var j = 0; j < removeButtons.length; j++) {
+                let removeButtons = answer.getElementsByClassName('remove-answer');
+                for (let j = 0; j < removeButtons.length; j++) {
                     removeButtons[j].addEventListener('click', function(e) {
                         e.target.parentNode.remove();
                     });
                 }
 
-                var characters = document.getElementsByClassName('character');
-                var pointsDiv = answer.querySelector('.points');
-                for (var j = 0; j < characters.length; j++) {
-                    var points = document.createElement('input');
+                let characters = document.getElementsByClassName('character');
+                let pointsDiv = answer.querySelector('.points');
+                for (let j = 0; j < characters.length; j++) {
+                    let points = document.createElement('input');
                     points.type = 'number';
                     points.name = 'answer_points[' + question.dataset.questionId + '][' + answer.dataset.answerId + '][]';
                     points.value = 0;
@@ -407,13 +407,13 @@ function ifeelquizzy_create_page()
                     points.dataset.questionId = questionCount;
                     points.id = "points_" + questionCount + "_" + j;
                     points.min = 0;
-                    points.max = 10;
+                    points.max = 100;
                     points.required = true;
 
-                    var label = document.createElement('label'); // Create a label element
+                    let label = document.createElement('label'); // Create a label element
                     label.setAttribute('for', "points_" + questionCount + "_" + j);
-                    var characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + j + '"]');
-                    var characterName = characterNameInput ? characterNameInput.value : 'Character ' + j;
+                    let characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + j + '"]');
+                    let characterName = characterNameInput ? characterNameInput.value : 'Character ' + j;
                     label.textContent = 'Points for ' + characterName;
 
                     pointsDiv.appendChild(label);
@@ -425,9 +425,9 @@ function ifeelquizzy_create_page()
 
 
         function previewImage(event, id) {
-            var reader = new FileReader();
+            let reader = new FileReader();
             reader.onload = function() {
-                var output = document.getElementById(id);
+                let output = document.getElementById(id);
                 output.src = reader.result;
             }
             reader.readAsDataURL(event.target.files[0]);
@@ -490,7 +490,6 @@ function updateQuizz()
                     'quiz_id' => $quiz_id
                 )
             );
-            $character_ids[] = $wpdb->insert_id;
         }
     }
     foreach ($characters as $character) {
@@ -500,10 +499,12 @@ function updateQuizz()
         }
     }
 
-    $question_ids = [];
     // Insert questions
+    $qid = 0;
     foreach ($_POST['question_text'] as $index => $question_text) {
+        $question_id = false;
         if (isset($_POST['question_db_id'][$index])) {
+            $qid = $_POST['question_db_id'][$index];
             $wpdb->update(
                 $wpdb->prefix . 'questions',
                 array(
@@ -521,9 +522,34 @@ function updateQuizz()
                     'quiz_id' => $quiz_id
                 )
             );
-            $question_ids[] = $wpdb->insert_id;
+            $question_id = $wpdb->insert_id;
+            $qid = $qid + 1;
+        }
+
+        foreach ($_POST['answer_text'][$qid] as $a_index => $answer_text) {
+            if (isset($_POST['answer_db_id'][$qid][$a_index])) {
+                $wpdb->update(
+                    $wpdb->prefix . 'answers',
+                    array(
+                        'answer' => $answer_text,
+                        'question_id' => $qid
+                    ),
+                    array(
+                        'id' => $_POST['answer_db_id'][$qid][$a_index]
+                    )
+                );
+            } else {
+                $wpdb->insert(
+                    $wpdb->prefix . 'answers',
+                    array(
+                        'answer' => $answer_text,
+                        'question_id' => $question_id ? $question_id : $qid
+                    )
+                );
+            }
         }
     }
+
     foreach ($questions as $question) {
         if (!in_array($question->id, $_POST['question_db_id'])) {
             $wpdb->delete("{$wpdb->prefix}questions", array('id' => $question->id));
@@ -563,37 +589,33 @@ function ifeelquizzy_modify_page()
         <h2>Characters</h2>
         <div id="characters" class="characters">
             <?php
-            $characterCount = 0;
             foreach ($characters as $character) : ?>
-                <div class="character">
+                <div class="character" data-character-id=<?= $character->id ?>>
                     <input type="hidden" name="character_db_id[]" value="<?= $character->id ?>">
-                    <label>Character: <?php $characterCount ?></label>
                     <input type="text" name="character_name[]" placeholder="Character Name *" value="<?php echo esc_attr($character->name); ?>" required />
                     <textarea name="character_description[]" placeholder="Character Description *" required><?php echo esc_attr($character->description); ?></textarea>
                     <input type="file" name="character_image[]" onchange="previewImage(event, 'character_image_preview_<?php echo esc_attr($character->id); ?>')">
                     <img id="character_image_preview_<?php echo esc_attr($character->id); ?>" src="<?php echo esc_attr($character->image_url); ?>" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;">
                     <button type="button" class="remove-character">Remove Character</button>
                 </div>
-            <?php
-                $characterCount += 1;
-            endforeach; ?>
+            <?php endforeach; ?>
         </div>
         <button type="button" id="add-character">Add Character</button>
 
         <h2>Questions</h2>
         <div id="questions" class="questions">
             <?php foreach ($questions as $question) : ?>
-                <div class="question">
+                <div class="question" data-question-id=<?= $question->id ?>>
                     <input type="hidden" name="question_db_id[]" value="<?= $question->id ?>">
                     <input type="text" name="question_text[]" placeholder="Question Text *" value="<?php echo esc_attr($question->question_text); ?>" required />
                     <div class="answers">
                         <?php foreach ($question->answers as $answer) : ?>
-                            <div class="answer">
-                                <input type="hidden" name="answer_db_id[]" value="<?= $answer->id ?>">
-                                <input type="text" name="answer_text[]" placeholder="Answer Text *" value="<?php echo esc_attr($answer->answer); ?>" required />
+                            <div class="answer" data-answer-id=<?= $answer->id ?>>
+                                <input type="hidden" name="answer_db_id[<?= $question->id ?>][]" value="<?= $answer->id ?>">
+                                <input type="text" name="answer_text[<?= $question->id ?>][]" placeholder="Answer Text *" value="<?php echo esc_attr($answer->answer); ?>" required />
                                 <div class="points">
                                     <?php foreach ($answer->points as $point) : ?>
-                                        <input type="number" name="answer_points[]" value="<?php echo esc_attr($point->points); ?>" required />
+                                        <input type="number" name="answer_points[<?= $question->id ?>][<?= $answer->id ?>][]" value="<?php echo esc_attr($point->points); ?>" data-character-id="<?= $point->character_id ?>" required />
                                     <?php endforeach; ?>
                                 </div>
                                 <button type="button" class="remove-answer">Remove Answer</button>
@@ -612,23 +634,15 @@ function ifeelquizzy_modify_page()
         </div>
     </form>
     <script>
-        var characterCount = <?= count($characters) + 1; ?>;
-        var questionCount = <?= count($questions) + 1; ?>;
-
-
         function removeCharacter() {
-            var removeButtons = document.getElementsByClassName('remove-character');
-            for (var i = 0; i < removeButtons.length; i++) {
+            let removeButtons = document.getElementsByClassName('remove-character');
+            for (let i = 0; i < removeButtons.length; i++) {
                 removeButtons[i].addEventListener('click', function(e) {
                     console.log('remove character clicked');
-                    var characterId = e.target.parentNode.dataset.characterId;
-                    var pointsFields = document.querySelectorAll('input[data-character-id="' + characterId + '"]');
-                    for (var j = 0; j < pointsFields.length; j++) {
-                        var pointsFieldId = pointsFields[j].id;
-                        var label = document.querySelector('label[for="' + pointsFieldId + '"]');
-                        if (label) {
-                            label.remove();
-                        }
+                    let characterId = e.target.parentNode.dataset.characterId;
+                    let pointsFields = document.querySelectorAll('input[data-character-id="' + characterId + '"]');
+                    for (let j = 0; j < pointsFields.length; j++) {
+                        let pointsFieldId = pointsFields[j].id;
                         pointsFields[j].remove();
                     }
                     e.target.parentNode.remove();
@@ -636,34 +650,28 @@ function ifeelquizzy_modify_page()
             }
         }
 
-        function addPointsToAnswers() {
-            var answers = document.getElementsByClassName('answer');
-            for (var i = 0; i < answers.length; i++) {
-                var points = document.createElement('input');
-                points.type = 'number';
-                points.name = 'answer_points[]';
-                points.value = 0;
-                points.dataset.characterId = i;
-                points.min = 0;
-                points.max = 10;
-                points.required = true;
-
-                var label = document.createElement('label'); // Create a label element
-                label.for = points.id; // Set the for attribute to the id of the points field
-                var characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + i + '"]');
-                console.log(characterNameInput);
-                var characterName = characterNameInput ? characterNameInput.value : 'Character ' + characterCount + ' *';
-                label.textContent = 'Points for ' + characterName;
-
+        function addPointsToAnswers(character = false) {
+            let answers = document.getElementsByClassName('answer');
+            let characters = document.getElementsByClassName('character');
+            for (let i = 0; i < answers.length; i++) {
                 let pointsDiv = answers[i].querySelector('.points');
-                pointsDiv.appendChild(label);
+                let answer = pointsDiv.closest('.answer');
+                let question = answer.closest('.question');
+                let points = document.createElement('input');
+                points.type = 'number';
+                points.name = 'answer_points[' + question.dataset.questionId + '][' + answer.dataset.answerId + '][]';
+                points.value = 0;
+                points.dataset.characterId = parseInt(characters[characters.length - 1].dataset.characterId);
+                points.min = 0;
+                points.max = 100;
+                points.required = true;
                 pointsDiv.appendChild(points);
             }
         }
 
         function addRemoveQuestionListeners() {
-            var removeButtons = document.getElementsByClassName('remove-question');
-            for (var i = 0; i < removeButtons.length; i++) {
+            let removeButtons = document.getElementsByClassName('remove-question');
+            for (let i = 0; i < removeButtons.length; i++) {
                 removeButtons[i].addEventListener('click', function(e) {
                     e.target.parentNode.remove();
                 });
@@ -671,8 +679,8 @@ function ifeelquizzy_modify_page()
         }
 
         function addRemoveAnswerListeners() {
-            var removeButtons = document.getElementsByClassName('remove-answer');
-            for (var i = 0; i < removeButtons.length; i++) {
+            let removeButtons = document.getElementsByClassName('remove-answer');
+            for (let i = 0; i < removeButtons.length; i++) {
                 removeButtons[i].addEventListener('click', function(e) {
                     e.target.parentNode.remove();
                 });
@@ -680,39 +688,36 @@ function ifeelquizzy_modify_page()
         }
 
         function addAnswerListeners() {
-            var addAnswerButton = document.getElementsByClassName('add-answer');
-            for (var i = 0; i < addAnswerButton.length; i++) {
+            let addAnswerButton = document.getElementsByClassName('add-answer');
+            for (let i = 0; i < addAnswerButton.length; i++) {
                 addAnswerButton[i].addEventListener('click', function(e) {
-                    var answer = document.createElement('div');
+                    let answer = document.createElement('div');
+                    let questionDiv = e.target.closest('.question');
+                    let questionId = questionDiv.dataset.questionId;
                     answer.className = 'answer';
-                    answer.innerHTML = '<input type="hidden" name="answer_db_id[]" value=""><input type="text" name="answer_text[]" placeholder="Answer Text *" required><div class="points"></div><button type="button" class="remove-answer">Remove Answer</button>';
+                    answer.innerHTML = '<input type="text" name="answer_text[' + questionId + '][]" placeholder="Answer Text *" required><div class="points"></div><button type="button" class="remove-answer">Remove Answer</button>';
+                    lastestAnswer = e.target.previousElementSibling.lastElementChild;
+                    answer.dataset.answerId = lastestAnswer ? parseInt(lastestAnswer.dataset.answerId) + 1 : 0;
                     e.target.previousElementSibling.appendChild(answer);
 
-                    var characters = document.getElementsByClassName('character');
-                    var pointsDiv = answer.querySelector('.points');
-                    for (var j = 0; j < characters.length; j++) {
-                        var points = document.createElement('input');
+                    let characters = document.getElementsByClassName('character');
+                    let pointsDiv = answer.querySelector('.points');
+                    for (let character of characters) {
+                        console.log
+                        let points = document.createElement('input');
                         points.type = 'number';
-                        points.name = 'answer_points[]';
+                        points.name = 'answer_points[' + questionId + '][' + answer.dataset.answerId + ']';
                         points.value = 0;
-                        points.dataset.characterId = j;
-                        points.dataset.questionId = questionCount;
-                        points.id = "points_" + questionCount + "_" + j;
+                        points.dataset.characterId = character.dataset.characterId;
+                        points.dataset.questionId = questionId;
                         points.min = 0;
-                        points.max = 10;
+                        points.max = 100;
                         points.required = true;
-
-                        var label = document.createElement('label'); // Create a label element
-                        label.setAttribute('for', "points_" + questionCount + "_" + j);
-                        var characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + j + '"]');
-                        var characterName = characterNameInput ? characterNameInput.value : 'Character ' + j;
-                        label.textContent = 'Points for ' + characterName;
-
-                        pointsDiv.appendChild(label);
                         pointsDiv.appendChild(points);
                     }
                 });
             }
+            addRemoveAnswerListeners();
         }
 
         removeCharacter();
@@ -720,36 +725,35 @@ function ifeelquizzy_modify_page()
         addAnswerListeners();
         addRemoveAnswerListeners();
 
-        document.getElementById('add-character').addEventListener('click', function() {
-            var character = document.createElement('div');
+        document.getElementById('add-character').addEventListener('click', function(e) {
+            let character = document.createElement('div');
             character.className = 'character';
-            character.dataset.characterId = characterCount;
-            character.innerHTML = '<label>Character: ' + characterCount + '</label><input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + characterCount + '\')"><img id="character_image_preview_' + characterCount + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
+            lastestCharacter = e.target.previousElementSibling.lastElementChild;
+            character.dataset.characterId = lastestCharacter ? parseInt(lastestCharacter.dataset.characterId) + 1 : 0;
+            character.innerHTML = '<input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + character.dataset.characterId + '\')"><img id="character_image_preview_' + character.dataset.characterId + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
             document.getElementById('characters').appendChild(character);
 
             removeCharacter();
             addPointsToAnswers();
-            characterCount++;
         });
 
-        document.getElementById('add-question').addEventListener('click', function() {
-            var question = document.createElement('div');
+        document.getElementById('add-question').addEventListener('click', function(e) {
+            let question = document.createElement('div');
             question.className = 'question';
             question.innerHTML = '<input type="text" name="question_text[]" placeholder="Question Text *" required><div class="answers"></div><button type="button" class="add-answer">Add Answer</button><button type="button" class="remove-question">Remove Question</button>';
-            question.dataset.questionId = questionCount;
+            lastestQuestion = e.target.previousElementSibling.lastElementChild;
+            question.dataset.questionId = lastestQuestion ? parseInt(lastestQuestion.dataset.questionId) + 1 : 0;
             document.getElementById('questions').appendChild(question);
 
             addRemoveQuestionListeners();
             addAnswerListeners();
             addRemoveAnswerListeners();
-
-            questionCount++;
         });
 
         function previewImage(event, id) {
-            var reader = new FileReader();
+            let reader = new FileReader();
             reader.onload = function() {
-                var output = document.getElementById(id);
+                let output = document.getElementById(id);
                 output.src = reader.result;
             }
             reader.readAsDataURL(event.target.files[0]);
