@@ -464,6 +464,7 @@ function updateQuizz()
         array('id' => $quiz_id)
     );
 
+    $character_ids = [];
     // Insert characters
     foreach ($_POST['character_name'] as $index => $character_name) {
         $character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
@@ -479,6 +480,7 @@ function updateQuizz()
                     'id' => $_POST['character_db_id'][$index]
                 )
             );
+            $character_ids[] = $_POST['character_db_id'][$index];
         } else {
             //$character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
             $wpdb->insert(
@@ -490,6 +492,7 @@ function updateQuizz()
                     'quiz_id' => $quiz_id
                 )
             );
+            $character_ids[] = $wpdb->insert_id;
         }
     }
     foreach ($characters as $character) {
@@ -526,8 +529,14 @@ function updateQuizz()
             $qid = $qid + 1;
         }
 
+        $aid = 0;
         foreach ($_POST['answer_text'][$qid] as $a_index => $answer_text) {
+            $answer_id = false;
+            if ($question_id) {
+                $aid = -1;
+            }
             if (isset($_POST['answer_db_id'][$qid][$a_index])) {
+                $aid = $_POST['answer_db_id'][$qid][$a_index];
                 $wpdb->update(
                     $wpdb->prefix . 'answers',
                     array(
@@ -546,6 +555,33 @@ function updateQuizz()
                         'question_id' => $question_id ? $question_id : $qid
                     )
                 );
+                $answer_id = $wpdb->insert_id;
+                $aid = $aid + 1;
+            }
+
+            foreach ($_POST['answer_points'][$qid][$aid] as $p_index => $point) {
+                if (isset($_POST['points_db_id'][$qid][$aid][$p_index])) {
+                    $wpdb->update(
+                        $wpdb->prefix . 'points',
+                        array(
+                            'points' => $point,
+                            'character_id' => $character_ids[$p_index],
+                            'answer_id' => $aid
+                        ),
+                        array(
+                            'id' => $_POST['points_db_id'][$qid][$aid][$p_index]
+                        )
+                    );
+                } else {
+                    $wpdb->insert(
+                        $wpdb->prefix . 'points',
+                        array(
+                            'points' => $point,
+                            'character_id' => $character_ids[$p_index],
+                            'answer_id' => $answer_id ? $answer_id : $aid
+                        )
+                    );
+                }
             }
         }
     }
@@ -553,6 +589,10 @@ function updateQuizz()
     foreach ($questions as $question) {
         if (!in_array($question->id, $_POST['question_db_id'])) {
             $wpdb->delete("{$wpdb->prefix}questions", array('id' => $question->id));
+            foreach ($question->answers as $answer) {
+                $wpdb->delete("{$wpdb->prefix}answers", array('id' => $answer->id));
+                $wpdb->delete("{$wpdb->prefix}points", array('answer_id' => $answer->id));
+            }
         }
     }
 
@@ -615,6 +655,7 @@ function ifeelquizzy_modify_page()
                                 <input type="text" name="answer_text[<?= $question->id ?>][]" placeholder="Answer Text *" value="<?php echo esc_attr($answer->answer); ?>" required />
                                 <div class="points">
                                     <?php foreach ($answer->points as $point) : ?>
+                                        <input type="hidden" name="points_db_id[<?= $question->id ?>][<?= $answer->id ?>][]" value="<?= $point->id ?>">
                                         <input type="number" name="answer_points[<?= $question->id ?>][<?= $answer->id ?>][]" value="<?php echo esc_attr($point->points); ?>" data-character-id="<?= $point->character_id ?>" required />
                                     <?php endforeach; ?>
                                 </div>
@@ -706,10 +747,9 @@ function ifeelquizzy_modify_page()
                         console.log
                         let points = document.createElement('input');
                         points.type = 'number';
-                        points.name = 'answer_points[' + questionId + '][' + answer.dataset.answerId + ']';
+                        points.name = 'answer_points[' + questionId + '][' + answer.dataset.answerId + '][]';
                         points.value = 0;
                         points.dataset.characterId = character.dataset.characterId;
-                        points.dataset.questionId = questionId;
                         points.min = 0;
                         points.max = 100;
                         points.required = true;
