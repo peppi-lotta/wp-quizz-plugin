@@ -153,6 +153,21 @@ function handle_ifeelquizzy_delete_quiz()
     exit;
 }
 
+add_action('admin_enqueue_scripts', 'rudr_include_js');
+function rudr_include_js()
+{
+    // WordPress media uploader scripts
+    if (!did_action('wp_enqueue_media')) {
+        wp_enqueue_media();
+    }
+    // our custom JS
+    wp_enqueue_script(
+        'mishaupload',
+        get_stylesheet_directory_uri() . '/misha-uploader.js',
+        array('jquery')
+    );
+}
+
 // Display form on admin page
 function ifeelquizzy_admin_page()
 {
@@ -242,13 +257,12 @@ function createQuizz()
     $character_ids = [];
     // Insert characters
     foreach ($_POST['character_name'] as $index => $character_name) {
-        //$character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
         $wpdb->insert(
             $wpdb->prefix . 'characters',
             array(
                 'name' => $character_name,
                 'description' => $_POST['character_description'][$index],
-                //'image' => $character_image,
+                'image' => $_POST['character_images'][$index] ?: '',
                 'quiz_id' => $quiz_id
             )
         );
@@ -316,12 +330,78 @@ function ifeelquizzy_create_page()
         let characterCount = 0;
         let questionCount = 0;
 
+        function initializeImageUploader() {
+            jQuery(function($) {
+                // on upload button click
+                $('body').off('click', '.rudr-upload').on('click', '.rudr-upload', function(event) {
+                    event.preventDefault(); // prevent default link click and page refresh
+
+                    const customUploader = wp.media({
+                        title: 'Insert image', // modal window title
+                        library: {
+                            // uploadedTo : wp.media.view.settings.post.id, // attach to the current post?
+                            type: 'image'
+                        },
+                        button: {
+                            text: 'Use this image' // button label text
+                        },
+                        multiple: false
+                    });
+
+                    const button = $(this)
+                    const imageId = button.next().next().val();
+
+                    customUploader.on('select', function() { // it also has "open" and "close" events
+                        const attachment = customUploader.state().get('selection').first().toJSON();
+                        button.removeClass('button').html('<img src="' + attachment.url + '">'); // add image instead of "Upload Image"
+                        button.next().show(); // show "Remove image" link
+                        button.next().next().val(attachment.id); // Populate the hidden field with image ID
+                    })
+
+                    // already selected images
+                    customUploader.on('open', function() {
+
+                        if (imageId) {
+                            const selection = customUploader.state().get('selection')
+                            attachment = wp.media.attachment(imageId);
+                            attachment.fetch();
+                            selection.add(attachment ? [attachment] : []);
+                        }
+
+                    })
+
+                    customUploader.open()
+
+                });
+                // on remove button click
+                $('body').off('click', '.rudr-remove').on('click', '.rudr-remove', function(event) {
+                    event.preventDefault();
+                    const button = $(this);
+                    button.next().val(''); // emptying the hidden field
+                    button.hide().prev().addClass('button').html('Upload image'); // replace the image with text
+                });
+            });
+        }
+
         document.getElementById('add-character').addEventListener('click', function() {
             let character = document.createElement('div');
             character.className = 'character';
             character.dataset.characterId = characterCount;
-            character.innerHTML = '<label>Character: ' + characterCount + '</label><input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + characterCount + '\')"><img id="character_image_preview_' + characterCount + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
+            character.innerHTML = '<input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><button type="button" class="remove-character">Remove Character</button>' +
+                '<?php if ($image = wp_get_attachment_image_url($image_id = false, "medium")) : ?>' +
+                '<a href="#" class="rudr-upload">' +
+                '<img src="<?php echo esc_url($image) ?>" />' +
+                '</a>' +
+                '<a href="#" class="rudr-remove">Remove image</a>' +
+                '<input type="hidden" name="character_images[]" value="<?php echo absint($image['id']) ?>">' +
+                '<?php else : ?>' +
+                '<a href="#" class="button rudr-upload">Upload image</a>' +
+                '<a href="#" class="rudr-remove" style="display:none">Remove image</a>' +
+                '<input type="hidden" name="character_images[]" value="">' +
+                '<?php endif; ?>';
             document.getElementById('characters').appendChild(character);
+
+            initializeImageUploader();
 
             let removeButtons = document.getElementsByClassName('remove-character');
             for (let i = 0; i < removeButtons.length; i++) {
@@ -467,14 +547,13 @@ function updateQuizz()
     $character_ids = [];
     // Insert characters
     foreach ($_POST['character_name'] as $index => $character_name) {
-        $character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
         if (isset($_POST['character_db_id'][$index])) {
             $wpdb->update(
                 $wpdb->prefix . 'characters',
                 array(
                     'name' => $character_name,
                     'description' => $_POST['character_description'][$index],
-                    'image' => $character_image,
+                    'image' => $_POST['character_images'][$index] ?: '',
                 ),
                 array(
                     'id' => $_POST['character_db_id'][$index]
@@ -634,8 +713,19 @@ function ifeelquizzy_modify_page()
                     <input type="hidden" name="character_db_id[]" value="<?= $character->id ?>">
                     <input type="text" name="character_name[]" placeholder="Character Name *" value="<?php echo esc_attr($character->name); ?>" required />
                     <textarea name="character_description[]" placeholder="Character Description *" required><?php echo esc_attr($character->description); ?></textarea>
-                    <input type="file" name="character_image[]" onchange="previewImage(event, 'character_image_preview_<?php echo esc_attr($character->id); ?>')">
-                    <img id="character_image_preview_<?php echo esc_attr($character->id); ?>" src="<?php echo esc_attr($character->image_url); ?>" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;">
+
+                    <?php if ($image = wp_get_attachment_image_url($character->image, "medium")) : ?>
+                        <a href="#" class="rudr-upload">
+                            <img src="<?php echo esc_url($image) ?>" />
+                        </a>
+                        <a href="#" class="rudr-remove">Remove image</a>
+                        <input type="hidden" name="character_images[]" value="<?php echo absint($character->image) ?>">
+                    <?php else : ?>
+                        <a href="#" class="button rudr-upload">Upload image</a>
+                        <a href="#" class="rudr-remove" style="display:none">Remove image</a>
+                        <input type="hidden" name="character_images[]" value="">
+                    <?php endif; ?>
+
                     <button type="button" class="remove-character">Remove Character</button>
                 </div>
             <?php endforeach; ?>
@@ -675,6 +765,61 @@ function ifeelquizzy_modify_page()
         </div>
     </form>
     <script>
+        function initializeImageUploader() {
+            jQuery(function($) {
+                // on upload button click
+                $('body').off('click', '.rudr-upload').on('click', '.rudr-upload', function(event) {
+                    event.preventDefault(); // prevent default link click and page refresh
+
+                    const customUploader = wp.media({
+                        title: 'Insert image', // modal window title
+                        library: {
+                            // uploadedTo : wp.media.view.settings.post.id, // attach to the current post?
+                            type: 'image'
+                        },
+                        button: {
+                            text: 'Use this image' // button label text
+                        },
+                        multiple: false
+                    });
+
+                    const button = $(this)
+                    const imageId = button.next().next().val();
+
+                    customUploader.on('select', function() { // it also has "open" and "close" events
+                        const attachment = customUploader.state().get('selection').first().toJSON();
+                        button.removeClass('button').html('<img src="' + attachment.url + '">'); // add image instead of "Upload Image"
+                        button.next().show(); // show "Remove image" link
+                        button.next().next().val(attachment.id); // Populate the hidden field with image ID
+                    })
+
+                    // already selected images
+                    customUploader.on('open', function() {
+
+                        if (imageId) {
+                            const selection = customUploader.state().get('selection')
+                            attachment = wp.media.attachment(imageId);
+                            attachment.fetch();
+                            selection.add(attachment ? [attachment] : []);
+                        }
+
+                    })
+
+                    customUploader.open()
+
+                });
+                // on remove button click
+                $('body').off('click', '.rudr-remove').on('click', '.rudr-remove', function(event) {
+                    event.preventDefault();
+                    const button = $(this);
+                    button.next().val(''); // emptying the hidden field
+                    button.hide().prev().addClass('button').html('Upload image'); // replace the image with text
+                });
+            });
+        }
+
+        initializeImageUploader();
+
         function removeCharacter() {
             let removeButtons = document.getElementsByClassName('remove-character');
             for (let i = 0; i < removeButtons.length; i++) {
@@ -770,7 +915,18 @@ function ifeelquizzy_modify_page()
             character.className = 'character';
             lastestCharacter = e.target.previousElementSibling.lastElementChild;
             character.dataset.characterId = lastestCharacter ? parseInt(lastestCharacter.dataset.characterId) + 1 : 0;
-            character.innerHTML = '<input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><input type="file" name="character_image[]" onchange="previewImage(event, \'character_image_preview_' + character.dataset.characterId + '\')"><img id="character_image_preview_' + character.dataset.characterId + '" src="#" alt="Character Image Preview" style="max-width: 200px; max-height: 200px;"><button type="button" class="remove-character">Remove Character</button>';
+            character.innerHTML = '<input type="text" name="character_name[]" placeholder="Character Name *" required><textarea name="character_description[]" placeholder="Character Description *" required></textarea><button type="button" class="remove-character">Remove Character</button>' +
+                '<?php if ($image = wp_get_attachment_image_url($image_id = false, "medium")) : ?>' +
+                '<a href="#" class="rudr-upload">' +
+                '<img src="<?php echo esc_url($image) ?>" />' +
+                '</a>' +
+                '<a href="#" class="rudr-remove">Remove image</a>' +
+                '<input type="hidden" name="character_images[]" value="<?php echo absint($image['id']) ?>">' +
+                '<?php else : ?>' +
+                '<a href="#" class="button rudr-upload">Upload image</a>' +
+                '<a href="#" class="rudr-remove" style="display:none">Remove image</a>' +
+                '<input type="hidden" name="character_images[]" value="">' +
+                '<?php endif; ?>';
             document.getElementById('characters').appendChild(character);
 
             removeCharacter();

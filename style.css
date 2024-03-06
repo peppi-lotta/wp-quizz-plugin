@@ -106,3 +106,7 @@ button {
 .delete-form {
     width: fit-content;
 }
+
+.rudr-upload img {
+    max-width: 200px;
+}
