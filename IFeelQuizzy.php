@@ -673,6 +673,12 @@ function updateQuizz()
                 $wpdb->delete("{$wpdb->prefix}points", array('answer_id' => $answer->id));
             }
         }
+        foreach ($question->answers as $answer) {
+            if (!in_array($answer->id, $_POST ['answer_db_id'][$question->id])) {
+                $wpdb->delete("{$wpdb->prefix}answers", array('id' => $answer->id));
+                $wpdb->delete("{$wpdb->prefix}points", array('answer_id' => $answer->id));
+            }
+        }
     }
 
     return $quiz_id;
