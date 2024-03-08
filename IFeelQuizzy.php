@@ -410,10 +410,6 @@ function ifeelquizzy_create_page()
                     let pointsFields = document.querySelectorAll('input[data-character-id="' + characterId + '"]');
                     for (let j = 0; j < pointsFields.length; j++) {
                         let pointsFieldId = pointsFields[j].id;
-                        let label = document.querySelector('label[for="' + pointsFieldId + '"]');
-                        if (label) {
-                            label.remove();
-                        }
                         pointsFields[j].remove();
                     }
                     e.target.parentNode.remove();
@@ -431,16 +427,11 @@ function ifeelquizzy_create_page()
                 points.min = 0;
                 points.max = 100;
                 points.required = true;
-
-                let label = document.createElement('label'); // Create a label element
-                label.for = points.id; // Set the for attribute to the id of the points field
                 let characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + i + '"]');
                 console.log(characterNameInput);
                 let characterName = characterNameInput ? characterNameInput.value : 'Character ' + characterCount + ' *';
-                label.textContent = 'Points for ' + characterName;
 
                 let pointsDiv = answers[i].querySelector('.points');
-                pointsDiv.appendChild(label);
                 pointsDiv.appendChild(points);
             }
 
@@ -489,29 +480,13 @@ function ifeelquizzy_create_page()
                     points.min = 0;
                     points.max = 100;
                     points.required = true;
-
-                    let label = document.createElement('label'); // Create a label element
-                    label.setAttribute('for', "points_" + questionCount + "_" + j);
                     let characterNameInput = document.querySelector('input[name="character_name[]"][data-character-id="' + j + '"]');
                     let characterName = characterNameInput ? characterNameInput.value : 'Character ' + j;
-                    label.textContent = 'Points for ' + characterName;
-
-                    pointsDiv.appendChild(label);
                     pointsDiv.appendChild(points);
                 }
             });
             questionCount++;
         });
-
-
-        function previewImage(event, id) {
-            let reader = new FileReader();
-            reader.onload = function() {
-                let output = document.getElementById(id);
-                output.src = reader.result;
-            }
-            reader.readAsDataURL(event.target.files[0]);
-        }
 
         document.getElementById('cancel').addEventListener('click', function() {
             window.location.href = '/admin.php?page=ifeelquizzy';
@@ -561,13 +536,12 @@ function updateQuizz()
             );
             $character_ids[] = $_POST['character_db_id'][$index];
         } else {
-            //$character_image = isset($_POST['character_image'][$index]) ? $_POST['character_image'][$index] : null;
             $wpdb->insert(
                 $wpdb->prefix . 'characters',
                 array(
                     'name' => $character_name,
                     'description' => $_POST['character_description'][$index],
-                    //'image' => $character_image,
+                    'image' => $_POST['character_images'][$index] ?: '',
                     'quiz_id' => $quiz_id
                 )
             );
@@ -674,7 +648,7 @@ function updateQuizz()
             }
         }
         foreach ($question->answers as $answer) {
-            if (!in_array($answer->id, $_POST ['answer_db_id'][$question->id])) {
+            if (!in_array($answer->id, $_POST['answer_db_id'][$question->id])) {
                 $wpdb->delete("{$wpdb->prefix}answers", array('id' => $answer->id));
                 $wpdb->delete("{$wpdb->prefix}points", array('answer_id' => $answer->id));
             }
@@ -750,9 +724,12 @@ function ifeelquizzy_modify_page()
                                 <input type="hidden" name="answer_db_id[<?= $question->id ?>][]" value="<?= $answer->id ?>">
                                 <input type="text" name="answer_text[<?= $question->id ?>][]" placeholder="Answer Text *" value="<?php echo esc_attr($answer->answer); ?>" required />
                                 <div class="points">
-                                    <?php foreach ($answer->points as $point) : ?>
-                                        <input type="hidden" name="points_db_id[<?= $question->id ?>][<?= $answer->id ?>][]" value="<?= $point->id ?>">
-                                        <input type="number" name="answer_points[<?= $question->id ?>][<?= $answer->id ?>][]" value="<?php echo esc_attr($point->points); ?>" data-character-id="<?= $point->character_id ?>" required />
+                                    <?php foreach ($answer->points as $index => $point) : ?>
+                                        <div class="point">
+                                            <input type="hidden" name="points_db_id[<?= $question->id ?>][<?= $answer->id ?>][]" value="<?= $point->id ?>">
+                                            <label for="point_<?= $point->id ?>"><?= $characters[$index]->name ?></label>
+                                            <input id="point_<?= $point->id ?>" type="number" name="answer_points[<?= $question->id ?>][<?= $answer->id ?>][]" value="<?php echo esc_attr($point->points); ?>" data-character-id="<?= $point->character_id ?>" required />
+                                        </div>
                                     <?php endforeach; ?>
                                 </div>
                                 <button type="button" class="remove-answer">Remove Answer</button>
@@ -857,7 +834,10 @@ function ifeelquizzy_modify_page()
                 points.min = 0;
                 points.max = 100;
                 points.required = true;
-                pointsDiv.appendChild(points);
+                let pointDiv = document.createElement('div');
+                pointDiv.className = 'point';
+                pointDiv.appendChild(points);
+                pointsDiv.appendChild(pointDiv);
             }
         }
 
@@ -895,7 +875,7 @@ function ifeelquizzy_modify_page()
                     let characters = document.getElementsByClassName('character');
                     let pointsDiv = answer.querySelector('.points');
                     for (let character of characters) {
-                        console.log
+                        let id = Math.random().toString(36).substr(2, 5);
                         let points = document.createElement('input');
                         points.type = 'number';
                         points.name = 'answer_points[' + questionId + '][' + answer.dataset.answerId + '][]';
@@ -904,7 +884,15 @@ function ifeelquizzy_modify_page()
                         points.min = 0;
                         points.max = 100;
                         points.required = true;
-                        pointsDiv.appendChild(points);
+                        points.id = "points_" + id;
+                        let pointDiv = document.createElement('div');
+                        pointDiv.className = 'point';
+                        let label = document.createElement('label');
+                        label.for = "points_" + id;
+                        label.textContent = character.querySelector('input[name="character_name[]"]').value;
+                        pointDiv.appendChild(label);
+                        pointDiv.appendChild(points);
+                        pointsDiv.appendChild(pointDiv);
                     }
                 });
             }
@@ -936,7 +924,7 @@ function ifeelquizzy_modify_page()
             document.getElementById('characters').appendChild(character);
 
             removeCharacter();
-            addPointsToAnswers();
+            addPointsToAnswers(character);
         });
 
         document.getElementById('add-question').addEventListener('click', function(e) {
@@ -951,15 +939,6 @@ function ifeelquizzy_modify_page()
             addAnswerListeners();
             addRemoveAnswerListeners();
         });
-
-        function previewImage(event, id) {
-            let reader = new FileReader();
-            reader.onload = function() {
-                let output = document.getElementById(id);
-                output.src = reader.result;
-            }
-            reader.readAsDataURL(event.target.files[0]);
-        }
 
         document.getElementById('cancel').addEventListener('click', function() {
             window.location.href = '/admin.php?page=ifeelquizzy';

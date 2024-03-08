@@ -45,8 +45,7 @@ input[type="file"] {
 }
 
 .characters,
-.questions,
-.answers {
+.questions {
     width: 100%;
     padding: 10px;
     border-radius: 4px;
@@ -56,14 +55,28 @@ input[type="file"] {
 
 /* Style the character and answer divs */
 .character,
-.question,
-.answer {
+.question {
     border: 1px solid #ccc;
     padding: 10px;
     margin-bottom: 10px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+}
+.answer, .points {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+}
+
+.answer {
+    margin-left: 10px;
+}
+
+.point {
+    display: flex;
+    flex-direction: column;
+    margin: 0 2px;
 }
 
 /* Style the buttons */
@@ -72,12 +85,12 @@ button {
     /* Green */
     border: none;
     color: white;
-    padding: 10px 20px;
+    padding: 10px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
     font-size: 16px;
-    margin-top: 10px;
+    margin-bottom: 2px;
     cursor: pointer;
 }
 
@@ -87,7 +100,6 @@ button {
 .remove-answer,
 .cancel {
     background-color: #f44336;
-    margin-top: 10px;
     margin-left: auto;
 }
 
